@@ -291,14 +291,19 @@ const TreeViewer = (() => {
 
   // --------------------------------------------------
   // FRONDOSOS: Roble, Sauce, Muerto
-  // Angulos corregidos segun documentacion:
-  //   Roble  → 60-70 deg (copa ancha y redondeada)
-  //   Sauce  → 8 deg inicial, cae hacia abajo (pendular)
+  // Angulos segun documentacion botanica:
+  //   Roble  → 62 deg (copa ancha y redondeada)
+  //   Sauce  → 12 deg inicial, cae pendularmente
   //   Muerto → 35 deg
+  // Fix 3D: se agrega rotacion base aleatoria para que las
+  // ramas no queden todas en el mismo plano (bug 2D anterior)
   // --------------------------------------------------
   function _drawFrondoso(group, params) {
-    const angulosEspecie = { roble: 62, sauce: 8, muerto: 35 };
+    const angulosEspecie = { roble: 62, sauce: 12, muerto: 35 };
     const angulo = angulosEspecie[params.tipo] ?? 30;
+
+    // Rotacion base aleatoria en Y — garantiza distribucion 3D real
+    const rotBase = Math.random() * Math.PI * 2;
 
     _addBranch(
       group,
@@ -308,61 +313,136 @@ const TreeViewer = (() => {
       params.tronco * 0.5,
       0,
       params.ramas,
-      { ...params, angulo }
+      { ...params, angulo, rotBase }
     );
   }
 
-  // Rama recursiva para frondosos
+  // Rama recursiva mejorada
   function _addBranch(group, start, dir, len, radius, depth, maxDepth, params) {
     if (depth > maxDepth || len < 1.5) return;
 
-    const end = start.clone().addScaledVector(dir, len);
+    // Variacion aleatoria de longitud para naturalidad
+    const actualLen = len * (0.88 + Math.random() * 0.24);
+    const end = start.clone().addScaledVector(dir, actualLen);
+
+    // Color de la rama — mas claro en profundidad
+    const color = params.tipo === 'muerto'
+      ? new THREE.Color().setHSL(0.08, 0.12, 0.38 + depth * 0.03)
+      : new THREE.Color().setHSL(0.07, 0.55, 0.16 + depth * 0.045);
 
     const path = new THREE.LineCurve3(start, end);
-    const geo = new THREE.TubeGeometry(path, 4, Math.max(radius, 0.3), 5, false);
-    const color = params.tipo === 'muerto'
-      ? new THREE.Color(0x6b6b5e)
-      : new THREE.Color().setHSL(0.08, 0.5, 0.18 + depth * 0.04);
+    const geo = new THREE.TubeGeometry(path, 4, Math.max(radius, 0.25), 6, false);
     group.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color })));
 
-    // Follaje en las puntas
+    // --------------------------------------------------
+    // FOLLAJE: diferenciado por especie
+    // Roble  → canopy plana tipo hongo con bumps organicos
+    // Sauce  → clusters pequenos y alargados
+    // --------------------------------------------------
     if (depth === maxDepth && params.tipo !== 'muerto' && params.densidad > 0) {
-      const leafColors = {
-        roble: new THREE.Color().setHSL(0.33, 0.55, 0.25),
-        sauce: new THREE.Color().setHSL(0.28, 0.50, 0.28),
-      };
-      const lColor = leafColors[params.tipo] || leafColors.roble;
-      const lGeo = new THREE.SphereGeometry(
-        (params.densidad / 10) * params.altura * 0.12 + 4, 6, 5
-      );
-      const leaf = new THREE.Mesh(lGeo, new THREE.MeshLambertMaterial({ color: lColor }));
-      leaf.position.copy(end);
-      group.add(leaf);
+
+      if (params.tipo === 'roble') {
+        // --- CANOPY PLANA (referencia Gnarly Trees) ---
+        const baseR    = (params.densidad / 10) * params.altura * 0.09 + 4;
+        const matCanopy = new THREE.MeshLambertMaterial({
+          color: new THREE.Color().setHSL(0.30 + Math.random() * 0.05, 0.52, 0.22 + Math.random() * 0.06)
+        });
+
+        // Elipsoide principal: ancho y aplastado (ancho > alto)
+        const mainGeo = new THREE.SphereGeometry(baseR, 8, 6);
+        const main    = new THREE.Mesh(mainGeo, matCanopy);
+        main.scale.set(1.5, 0.5, 1.5);   // muy plano y ancho
+        main.position.copy(end);
+        group.add(main);
+
+        // Bumps organicos encima del canopy principal
+        const numBumps = 3 + Math.floor(params.densidad / 2.5);
+        for (let b = 0; b < numBumps; b++) {
+          const bumpR   = baseR * (0.28 + Math.random() * 0.42);
+          const angle   = (Math.PI * 2 / numBumps) * b + Math.random() * 1.0;
+          const dist    = baseR * (0.25 + Math.random() * 0.60);
+          const bumpMat = new THREE.MeshLambertMaterial({
+            color: new THREE.Color().setHSL(
+              0.29 + Math.random() * 0.07,
+              0.50 + Math.random() * 0.12,
+              0.20 + Math.random() * 0.10
+            )
+          });
+          const bumpGeo = new THREE.SphereGeometry(bumpR, 6, 5);
+          const bump    = new THREE.Mesh(bumpGeo, bumpMat);
+          bump.scale.set(1.1, 0.75, 1.1);  // levemente aplastados
+          bump.position.set(
+            end.x + Math.cos(angle) * dist,
+            end.y + baseR * 0.18 + Math.random() * bumpR * 0.6,
+            end.z + Math.sin(angle) * dist
+          );
+          group.add(bump);
+        }
+
+      } else {
+        // --- SAUCE: clusters pequenos alargados hacia abajo ---
+        const baseR    = (params.densidad / 10) * params.altura * 0.05 + 2;
+        const numBlobs = 2 + Math.floor(params.densidad / 3);
+        for (let b = 0; b < numBlobs; b++) {
+          const r      = baseR * (0.5 + Math.random() * 0.6);
+          const offset = new THREE.Vector3(
+            (Math.random() - 0.5) * baseR * 1.2,
+            -Math.random() * baseR * 0.8,   // caen levemente hacia abajo
+            (Math.random() - 0.5) * baseR * 1.2
+          );
+          const lColor = new THREE.Color().setHSL(
+            0.27 + (Math.random() - 0.5) * 0.05,
+            0.48 + Math.random() * 0.1,
+            0.25 + Math.random() * 0.08
+          );
+          const lGeo = new THREE.SphereGeometry(r, 5, 4);
+          lGeo.scale(1.0, 1.4, 1.0);  // alargados verticalmente
+          const leaf = new THREE.Mesh(lGeo, new THREE.MeshLambertMaterial({ color: lColor }));
+          leaf.position.copy(end).add(offset);
+          group.add(leaf);
+        }
+      }
       return;
     }
 
-    const numBranches = depth < 2 ? 2 : (Math.random() > 0.35 ? 3 : 2);
-    const newLen = len * (params.tipo === 'sauce' ? 0.72 : 0.68);
-    const newRad = radius * 0.65;
-    const angle = params.angulo * Math.PI / 180;
+    // --------------------------------------------------
+    // SUB-RAMAS: siempre 3 en el primer nivel para evitar
+    // el look 2D que daban 2 ramas en plano XY
+    // Se agrega rotacion por nivel para distribucion 3D real
+    // --------------------------------------------------
+    const numBranches = depth === 0 ? 3 : (Math.random() > 0.3 ? 3 : 2);
+    const newLen = len * (params.tipo === 'sauce' ? 0.70 : 0.67);
+    const newRad = radius * 0.62;
+    const angle  = params.angulo * Math.PI / 180;
+
+    // Offset de rotacion unico por nivel — clave para el 3D
+    const rotOffset = (params.rotBase || 0) + depth * 1.1 + Math.random() * 0.5;
 
     for (let i = 0; i < numBranches; i++) {
-      const theta = (Math.PI * 2 / numBranches) * i + (Math.random() - 0.5) * 0.6;
+      const theta = (Math.PI * 2 / numBranches) * i + rotOffset;
       let newDir;
 
       if (params.tipo === 'sauce' && depth >= 1) {
-        // Sauce: ramas cuelgan con fuerza creciente por nivel
+        // Sauce: gravedad creciente por nivel
         newDir = new THREE.Vector3(
-          dir.x * Math.cos(angle) + Math.sin(theta) * Math.sin(angle),
-          dir.y * Math.cos(angle) - Math.sin(angle) * (0.5 + depth * 0.2),
-          dir.z * Math.cos(angle) + Math.cos(theta) * Math.sin(angle)
+          Math.sin(theta) * Math.sin(angle),
+          dir.y * Math.cos(angle) - (0.45 + depth * 0.22),
+          Math.cos(theta) * Math.sin(angle)
         ).normalize();
       } else {
+        // Eje de rotacion rotado en Y para garantizar 3D
         const axis = new THREE.Vector3(Math.sin(theta), 0, Math.cos(theta));
-        newDir = dir.clone().applyAxisAngle(axis, angle).normalize();
+        newDir = dir.clone().applyAxisAngle(axis, angle);
+        // Pequeno giro aleatorio en Y para mas naturalidad
+        newDir.applyAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          (Math.random() - 0.5) * 0.5
+        );
+        newDir.normalize();
       }
 
-      _addBranch(group, end.clone(), newDir, newLen, newRad, depth + 1, maxDepth, params);
+      _addBranch(group, end.clone(), newDir, newLen, newRad,
+        depth + 1, maxDepth, { ...params, rotBase: rotOffset });
     }
   }
 

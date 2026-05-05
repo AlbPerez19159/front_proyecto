@@ -54,24 +54,45 @@ const escalaLabels = {
 TreeViewer.init(els.canvas);
 TreeViewer.drawTree(state);
 
-// Conecta sliders con estado y vista
-function bindSlider(id, key) {
-  const input = document.getElementById(id);
-  const label = document.getElementById('val-' + id);
-  input.addEventListener('input', () => {
-    state[key] = Number(input.value);
-    label.textContent = input.value;
+// Conecta sliders con estado, vista e inputs numericos
+function bindSlider(id, key, min, max) {
+  const range  = document.getElementById(id);
+  const label  = document.getElementById('val-' + id);
+  const numIn  = document.getElementById('num-' + id);
+
+  // Slider → numero + vista
+  range.addEventListener('input', () => {
+    const v = Number(range.value);
+    state[key] = v;
+    label.textContent = v;
+    if (numIn) numIn.value = v;
     TreeViewer.drawTree(state);
     updateBadges();
     state.stlUrl = null;
     els.btnDescargar.disabled = true;
   });
+
+  // Input numerico → slider + vista (change: solo al salir del campo)
+  if (numIn) {
+    numIn.addEventListener('change', () => {
+      let v = Number(numIn.value);
+      v = Math.max(min, Math.min(max, v));
+      numIn.value = v;
+      range.value = v;
+      state[key] = v;
+      label.textContent = v;
+      TreeViewer.drawTree(state);
+      updateBadges();
+      state.stlUrl = null;
+      els.btnDescargar.disabled = true;
+    });
+  }
 }
 
-bindSlider('altura',   'altura');
-bindSlider('tronco',   'tronco');
-bindSlider('ramas',    'ramas');
-bindSlider('densidad', 'densidad');
+bindSlider('altura',   'altura',   20, 200);
+bindSlider('tronco',   'tronco',   1,  20);
+bindSlider('ramas',    'ramas',    1,  6);
+bindSlider('densidad', 'densidad', 0,  10);
 
 els.tipo.addEventListener('change', () => {
   state.tipo = els.tipo.value;
