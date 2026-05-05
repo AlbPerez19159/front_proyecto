@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de Árboles 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">Árbol<em>3D</em></span>
+      </div>
+      <p class="header-sub">Generador paramétrico de modelos para dioramas</p>
+    </div>
+  </header>
+
+  <main class="app">
+
+    <!-- Panel de controles -->
+    <aside class="panel">
+      <section class="panel-section">
+        <h2 class="section-title">Especie</h2>
+        <div class="select-group">
+          <select id="tipo" class="select-input">
+            <option value="roble">Roble</option>
+            <option value="pino">Pino</option>
+            <option value="sauce">Sauce llorón</option>
+            <option value="muerto">Árbol muerto</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">Parámetros</h2>
+
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="altura">Altura <span class="unit">mm</span></label>
+            <span class="val" id="val-altura">80</span>
+          </div>
+          <input type="range" id="altura" min="30" max="150" value="80" step="5" />
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="tronco">Tronco <span class="unit">mm</span></label>
+            <span class="val" id="val-tronco">5</span>
+          </div>
+          <input type="range" id="tronco" min="2" max="12" value="5" step="1" />
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="ramas">Iteraciones</label>
+            <span class="val" id="val-ramas">4</span>
+          </div>
+          <input type="range" id="ramas" min="2" max="6" value="4" step="1" />
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="densidad">Densidad follaje</label>
+            <span class="val" id="val-densidad">7</span>
+          </div>
+          <input type="range" id="densidad" min="0" max="10" value="7" step="1" />
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">Escala diorama</h2>
+        <div class="select-group">
+          <select id="escala" class="select-input">
+            <option value="87">1:87 (HO)</option>
+            <option value="72">1:72 (guerra)</option>
+            <option value="48">1:48 (O)</option>
+            <option value="35">1:35 (militar)</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">Correo</h2>
+        <input type="email" id="correo" class="text-input" placeholder="tu@correo.com" />
+      </section>
+
+      <div class="panel-actions">
+        <button id="btn-generar" class="btn btn-primary">
+          <span class="btn-icon">◈</span> Generar árbol
+        </button>
+        <button id="btn-descargar" class="btn btn-secondary" disabled>
+          <span class="btn-icon">↓</span> Descargar STL
+        </button>
+      </div>
+
+      <div id="status" class="status hidden"></div>
+    </aside>
+
+    <!-- Vista 3D -->
+    <section class="viewer">
+      <div class="viewer-badges">
+        <span class="badge" id="badge-especie">Roble</span>
+        <span class="badge" id="badge-escala">1:87 HO</span>
+        <span class="badge" id="badge-altura">80mm</span>
+      </div>
+      <canvas id="canvas3d"></canvas>
+      <div class="viewer-hint">Arrastra para rotar · Scroll para zoom</div>
+    </section>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/tree.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
