@@ -2,6 +2,8 @@
 
 Interfaz web para el generador paramétrico de modelos de árboles 3D para dioramas.
 
+> 🔗 **Repositorio backend:** [github.com/AlbPerez19159/back-end_proyecto](https://github.com/AlbPerez19159/back-end_proyecto)
+
 ## Tecnologías
 
 - HTML5 + CSS3 + JavaScript vanilla
