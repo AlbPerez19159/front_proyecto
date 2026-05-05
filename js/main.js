@@ -17,25 +17,38 @@ const state = {
 
 // Referencias a elementos del DOM
 const els = {
-  tipo:        document.getElementById('tipo'),
-  altura:      document.getElementById('altura'),
-  tronco:      document.getElementById('tronco'),
-  ramas:       document.getElementById('ramas'),
-  densidad:    document.getElementById('densidad'),
-  escala:      document.getElementById('escala'),
-  correo:      document.getElementById('correo'),
-  btnGenerar:  document.getElementById('btn-generar'),
-  btnDescargar:document.getElementById('btn-descargar'),
-  status:      document.getElementById('status'),
-  badgeEspecie:document.getElementById('badge-especie'),
-  badgeEscala: document.getElementById('badge-escala'),
-  badgeAltura: document.getElementById('badge-altura'),
-  canvas:      document.getElementById('canvas3d'),
+  tipo:         document.getElementById('tipo'),
+  altura:       document.getElementById('altura'),
+  tronco:       document.getElementById('tronco'),
+  ramas:        document.getElementById('ramas'),
+  densidad:     document.getElementById('densidad'),
+  escala:       document.getElementById('escala'),
+  correo:       document.getElementById('correo'),
+  btnGenerar:   document.getElementById('btn-generar'),
+  btnDescargar: document.getElementById('btn-descargar'),
+  status:       document.getElementById('status'),
+  badgeEspecie: document.getElementById('badge-especie'),
+  badgeEscala:  document.getElementById('badge-escala'),
+  badgeAltura:  document.getElementById('badge-altura'),
+  canvas:       document.getElementById('canvas3d'),
 };
 
-// Nombres legibles
-const tipoLabels  = { roble: 'Roble', pino: 'Pino', sauce: 'Sauce llorón', muerto: 'Árbol muerto' };
-const escalaLabels = { 87: '1:87 HO', 72: '1:72', 48: '1:48 O', 35: '1:35' };
+// Nombres legibles para badges
+const tipoLabels = {
+  roble:     'Roble',
+  pino:      'Pino insigne',
+  sauce:     'Sauce llorón',
+  muerto:    'Árbol muerto',
+  palmera:   'Palmera cocotera',   // Cocos nucifera
+  araucaria: 'Araucaria',          // Araucaria araucana
+};
+
+const escalaLabels = {
+  87: '1:87 HO',
+  72: '1:72',
+  48: '1:48 O',
+  35: '1:35',
+};
 
 // Inicializa la escena 3D
 TreeViewer.init(els.canvas);
