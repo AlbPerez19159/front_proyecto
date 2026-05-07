@@ -1,136 +1,148 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de Árboles 3D</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
+  <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
       <div class="logo">
-        <span class="logo-icon">⬡</span>
-        <span class="logo-text">Árbol<em>3D</em></span>
+        <span class="logo-icon">⌬</span>
+        <span>Tree<em>3D</em></span>
       </div>
-      <p class="header-sub">Generador paramétrico de modelos para dioramas</p>
+      <div class="header-sub">Generador paramétrico para impresión · v2.1</div>
     </div>
   </header>
 
-  <main class="app">
+  <!-- APP -->
+  <div class="app">
 
-    <!-- Panel de controles -->
+    <!-- PANEL LATERAL -->
     <aside class="panel">
+
+      <!-- ESPECIE -->
       <section class="panel-section">
-        <h2 class="section-title">Especie</h2>
+        <div class="section-title">Especie</div>
         <div class="select-group">
           <select id="tipo" class="select-input">
-	    <option value="palmera">Palmera cocotera</option>
-            <option value="araucaria">Araucaria</option>
-            <option value="roble">Roble</option>
-            <option value="pino">Pino</option>
-            <option value="sauce">Sauce llorón</option>
+            <option value="roble">Roble (Quercus robur)</option>
+            <option value="eucalipto">Eucalipto (Eucalyptus globulus)</option>
+            <option value="pino">Pino insigne (Pinus radiata)</option>
+            <option value="palmera">Palmera (Cocos nucifera)</option>
+            <option value="araucaria">Araucaria (A. araucana)</option>
             <option value="muerto">Árbol muerto</option>
           </select>
         </div>
+
+        <!-- Tipo de tronco — solo visible para roble y eucalipto -->
+        <div class="select-group trunk-type-group" id="trunk-type-group" hidden>
+          <div class="section-title trunk-type-label">Tipo de tronco</div>
+          <div class="trunk-switch">
+            <button type="button" class="switch-btn active" data-trunk="recto">Recto</button>
+            <button type="button" class="switch-btn" data-trunk="natural">Natural</button>
+          </div>
+          <div class="switch-hint">El natural se curva como crecen en libertad</div>
+        </div>
       </section>
 
+      <!-- PARAMETROS -->
       <section class="panel-section">
-        <h2 class="section-title">Parámetros</h2>
+        <div class="section-title">Parámetros</div>
 
-	<!-- ALTURA -->
-	<div class="slider-group">
-	  <div class="slider-row">
-	    <label>Altura <span class="unit">mm</span></label>
-	    <div class="val-group">
-	      <input type="number" id="num-altura" class="num-input" min="20" max="200" value="80">
-	      <span class="val" id="val-altura">80</span>
-	    </div>
-	  </div>
-	  <input type="range" id="altura" min="20" max="200" value="80" step="1">
-	</div>
- 
-	<!-- TRONCO -->
-	<div class="slider-group">
-	  <div class="slider-row">
-	    <label>Tronco <span class="unit">mm</span></label>
-	    <div class="val-group">
-	      <input type="number" id="num-tronco" class="num-input" min="1" max="20" value="5">
-	      <span class="val" id="val-tronco">5</span>
-	    </div>
-	  </div>
-	  <input type="range" id="tronco" min="1" max="20" value="5" step="0.5">
-	</div>
- 
-	<!-- RAMAS (Iteraciones) -->
-	<div class="slider-group">
-	  <div class="slider-row">
-	    <label>Iteraciones</label>
-	    <div class="val-group">
-	      <input type="number" id="num-ramas" class="num-input" min="1" max="6" value="4">
-	      <span class="val" id="val-ramas">4</span>
-	    </div>
-	  </div>
-	  <input type="range" id="ramas" min="1" max="6" value="4" step="1">
-	</div>
- 
-	<!-- DENSIDAD -->
-	<div class="slider-group">
-	  <div class="slider-row">
-	    <label>Densidad follaje</label>
-	    <div class="val-group">
-	      <input type="number" id="num-densidad" class="num-input" min="0" max="10" value="7">
-	      <span class="val" id="val-densidad">7</span>
-	    </div>
-	  </div>
-	  <input type="range" id="densidad" min="0" max="10" value="7" step="1">
-	</div>
- 
+        <!-- Altura -->
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="altura">Altura <span class="unit">mm</span></label>
+            <input type="number" class="num-input" id="num-altura" min="20" max="200" value="80">
+          </div>
+          <input type="range" id="altura" min="20" max="200" value="80">
+        </div>
+
+        <!-- Tronco -->
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="tronco">Grosor tronco</label>
+            <input type="number" class="num-input" id="num-tronco" min="1" max="20" value="5">
+          </div>
+          <input type="range" id="tronco" min="1" max="20" value="5">
+        </div>
+
+        <!-- Ramas (mínimo subido a 3 para más frondosidad) -->
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="ramas">Niveles de ramas</label>
+            <input type="number" class="num-input" id="num-ramas" min="3" max="7" value="5">
+          </div>
+          <input type="range" id="ramas" min="3" max="7" value="5">
+        </div>
+
+        <!-- Densidad -->
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="densidad">Densidad follaje</label>
+            <input type="number" class="num-input" id="num-densidad" min="0" max="10" value="7">
+          </div>
+          <input type="range" id="densidad" min="0" max="10" value="7">
+        </div>
+      </section>
+
+      <!-- ESCALA -->
       <section class="panel-section">
-        <h2 class="section-title">Escala diorama</h2>
+        <div class="section-title">Escala de impresión</div>
         <div class="select-group">
           <select id="escala" class="select-input">
-            <option value="87">1:87 (HO)</option>
-            <option value="72">1:72 (guerra)</option>
-            <option value="48">1:48 (O)</option>
+            <option value="87">1:87 HO (ferroviario)</option>
+            <option value="72">1:72</option>
+            <option value="48">1:48 O</option>
             <option value="35">1:35 (militar)</option>
           </select>
         </div>
       </section>
 
+      <!-- CORREO -->
       <section class="panel-section">
-        <h2 class="section-title">Correo</h2>
-        <input type="email" id="correo" class="text-input" placeholder="tu@correo.com" />
+        <div class="section-title">Envío por correo</div>
+        <input type="email" id="correo" class="text-input" placeholder="tu@correo.cl">
       </section>
 
+      <!-- ACCIONES -->
       <div class="panel-actions">
         <button id="btn-generar" class="btn btn-primary">
-          <span class="btn-icon">◈</span> Generar árbol
+          <span class="btn-icon">⚙</span>
+          <span>Generar STL</span>
         </button>
         <button id="btn-descargar" class="btn btn-secondary" disabled>
-          <span class="btn-icon">↓</span> Descargar STL
+          <span class="btn-icon">↓</span>
+          <span>Descargar modelo</span>
         </button>
+        <div id="status" class="status hidden"></div>
       </div>
-
-      <div id="status" class="status hidden"></div>
     </aside>
 
-    <!-- Vista 3D -->
-    <section class="viewer">
+    <!-- VIEWER -->
+    <main class="viewer">
       <div class="viewer-badges">
         <span class="badge" id="badge-especie">Roble</span>
         <span class="badge" id="badge-escala">1:87 HO</span>
         <span class="badge" id="badge-altura">80mm</span>
       </div>
       <canvas id="canvas3d"></canvas>
-      <div class="viewer-hint">Arrastra para rotar · Scroll para zoom</div>
-    </section>
+      <div class="viewer-hint">arrastra para rotar · rueda para zoom</div>
+    </main>
 
-  </main>
+  </div>
 
+  <!-- THREE.JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="js/tree.js"></script>
   <script src="js/main.js"></script>

@@ -114,15 +114,19 @@ html, body {
   margin-bottom: 10px;
 }
 
-/* Sliders */
-.slider-group { margin-bottom: 12px; }
+/* =============================================
+   Sliders + input numérico unificado
+   El num-input ahora reemplaza al span "val" (un solo dato visible)
+   ============================================= */
+.slider-group { margin-bottom: 14px; }
 .slider-group:last-child { margin-bottom: 0; }
 
 .slider-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  gap: 8px;
 }
 
 .slider-row label {
@@ -132,13 +136,30 @@ html, body {
 
 .unit { color: var(--text3); font-size: 10px; }
 
-.val {
-  font-size: 12px;
-  font-weight: 500;
+.num-input {
+  width: 56px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
   color: var(--green);
-  min-width: 24px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 3px 6px;
   text-align: right;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
 }
+
+.num-input::-webkit-outer-spin-button,
+.num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.num-input:hover { border-color: var(--green-dim); }
+.num-input:focus { border-color: var(--green); }
 
 input[type=range] {
   -webkit-appearance: none;
@@ -163,8 +184,11 @@ input[type=range]::-webkit-slider-thumb {
 
 input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
-/* Select */
+/* =============================================
+   Selects e inputs de texto
+   ============================================= */
 .select-group { position: relative; }
+.select-group + .select-group { margin-top: 12px; }
 
 .select-input {
   width: 100%;
@@ -182,7 +206,6 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
 .select-input:focus { border-color: var(--green-dim); }
 
-/* Text input */
 .text-input {
   width: 100%;
   background: var(--bg3);
@@ -198,7 +221,53 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .text-input::placeholder { color: var(--text3); }
 .text-input:focus { border-color: var(--green-dim); }
 
-/* Buttons */
+/* =============================================
+   Switch de tipo de tronco (recto / natural)
+   Visible solo para roble y eucalipto
+   ============================================= */
+.trunk-type-group[hidden] { display: none; }
+
+.trunk-type-label { margin-top: 4px; margin-bottom: 6px; }
+
+.trunk-switch {
+  display: flex;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 2px;
+  gap: 2px;
+}
+
+.switch-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.switch-btn:hover { color: var(--text); }
+
+.switch-btn.active {
+  background: var(--green-dim);
+  color: var(--text);
+}
+
+.switch-hint {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* =============================================
+   Botones
+   ============================================= */
 .panel-actions {
   display: flex;
   flex-direction: column;
@@ -248,7 +317,9 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
 .btn-icon { font-size: 14px; }
 
-/* Status */
+/* =============================================
+   Estado
+   ============================================= */
 .status {
   margin-top: 12px;
   padding: 10px 12px;
@@ -308,7 +379,7 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 }
 
 /* =============================================
-   Responsive mínimo
+   Responsive
    ============================================= */
 @media (max-width: 768px) {
   html, body { overflow: auto; }
@@ -316,36 +387,3 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   .panel { height: auto; overflow: visible; }
   .viewer { height: 400px; }
 }
-
-<style>
-.val-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
- 
-.num-input {
-  width: 48px;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  color: var(--green);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 4px;
-  text-align: center;
-  outline: none;
-  -moz-appearance: textfield;
-}
- 
-.num-input::-webkit-outer-spin-button,
-.num-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
- 
-.num-input:focus {
-  border-color: var(--green);
-}
-</style>
