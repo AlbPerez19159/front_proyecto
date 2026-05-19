@@ -1,52 +1,52 @@
-// main.js — Logica principal: controles, estado y conexion con el backend
-// Cambios v2.1:
-//   - sauce reemplazado por eucalipto (decision botanica)
-//   - switch de tipo de tronco (recto / natural) para roble y eucalipto
-//   - num-input es el unico display del valor (eliminado span "val")
-//   - minimo de niveles de ramas subido a 3 → arboles mas frondosos por defecto
+// main.js — v3.2
+// Cambios:
+//   - Sliders recalculan solo al soltar el click (mouseup/touchend)
+//   - Al cambiar especie se carga su JSON de parámetros desde /data/{especie}.json
+//   - Export JSON sigue disponible para guardar configuración actual
 
 const API_URL = 'http://localhost:8000';
 
-// Estado actual de los parametros
 const state = {
-  tipo:         'roble',
-  trunco_tipo:  'recto',   // recto | natural — solo aplica a roble y eucalipto
-  altura:       80,
-  tronco:       5,
-  ramas:        5,         // antes 4, subido para mas follaje
-  densidad:     7,
-  escala:       87,
-  correo:       '',
-  stlUrl:       null,
+  tipo:        'roble',
+  trunco_tipo: 'recto',
+  altura:      80,
+  tronco:      5,
+  ramas:       5,
+  densidad:    7,
+  hojas:       true,
+  escala:      87,
+  correo:      '',
+  stlUrl:      null,
 };
 
-// Especies que aceptan tipo de tronco curvo
-const ESPECIES_CON_TRONCO = ['roble', 'eucalipto'];
+const ESPECIES_CON_TRONCO      = ['roble', 'eucalipto'];
+const ESPECIES_CON_HOJAS_SWITCH = ['roble'];
 
-// Referencias a elementos del DOM
 const els = {
-  tipo:           document.getElementById('tipo'),
-  trunkGroup:     document.getElementById('trunk-type-group'),
-  trunkButtons:   document.querySelectorAll('.switch-btn'),
-  altura:         document.getElementById('altura'),
-  tronco:         document.getElementById('tronco'),
-  ramas:          document.getElementById('ramas'),
-  densidad:       document.getElementById('densidad'),
-  escala:         document.getElementById('escala'),
-  correo:         document.getElementById('correo'),
-  btnGenerar:     document.getElementById('btn-generar'),
-  btnDescargar:   document.getElementById('btn-descargar'),
-  status:         document.getElementById('status'),
-  badgeEspecie:   document.getElementById('badge-especie'),
-  badgeEscala:    document.getElementById('badge-escala'),
-  badgeAltura:    document.getElementById('badge-altura'),
-  canvas:         document.getElementById('canvas3d'),
+  tipo:          document.getElementById('tipo'),
+  trunkGroup:    document.getElementById('trunk-type-group'),
+  trunkButtons:  document.querySelectorAll('.switch-btn[data-trunk]'),
+  hojasGroup:    document.getElementById('hojas-group'),
+  hojasButtons:  document.querySelectorAll('.hojas-btn'),
+  densidadGroup: document.getElementById('densidad-group'),
+  altura:        document.getElementById('altura'),
+  tronco:        document.getElementById('tronco'),
+  ramas:         document.getElementById('ramas'),
+  densidad:      document.getElementById('densidad'),
+  escala:        document.getElementById('escala'),
+  correo:        document.getElementById('correo'),
+  btnGenerar:    document.getElementById('btn-generar'),
+  btnDescargar:  document.getElementById('btn-descargar'),
+  status:        document.getElementById('status'),
+  badgeEspecie:  document.getElementById('badge-especie'),
+  badgeEscala:   document.getElementById('badge-escala'),
+  badgeAltura:   document.getElementById('badge-altura'),
+  canvas:        document.getElementById('canvas3d'),
 };
 
-// Nombres legibles para badges
 const tipoLabels = {
   roble:     'Roble',
-  eucalipto: 'Eucalipto',          // reemplaza al sauce
+  eucalipto: 'Eucalipto',
   pino:      'Pino insigne',
   muerto:    'Árbol muerto',
   palmera:   'Palmera cocotera',
@@ -60,27 +60,81 @@ const escalaLabels = {
   35: '1:35',
 };
 
-// Inicializa la escena 3D
+// --------------------------------------------------
+// Init
+// --------------------------------------------------
 TreeViewer.init(els.canvas);
 TreeViewer.drawTree(state);
 
 // --------------------------------------------------
-// Slider <-> Input numerico
-// El input numerico es el UNICO display del valor
+// Carga JSON de especie desde /data/{especie}.json
+// Aplica los valores al estado y a los controles UI
+// --------------------------------------------------
+async function cargarEspecie(tipo) {
+  try {
+    const res = await fetch(`data/${tipo}.json`);
+    if (!res.ok) throw new Error('no encontrado');
+    const data = await res.json();
+
+    // Aplicar parámetros del JSON al estado
+    if (data.altura      !== undefined) _setSlider('altura',   data.altura);
+    if (data.tronco      !== undefined) _setSlider('tronco',   data.tronco);
+    if (data.ramas       !== undefined) _setSlider('ramas',    data.ramas);
+    if (data.densidad    !== undefined) _setSlider('densidad', data.densidad);
+    if (data.trunco_tipo !== undefined) {
+      state.trunco_tipo = data.trunco_tipo;
+      els.trunkButtons.forEach(b =>
+        b.classList.toggle('active', b.dataset.trunk === data.trunco_tipo));
+    }
+    if (data.hojas !== undefined) {
+      state.hojas = data.hojas;
+      els.hojasButtons.forEach(b =>
+        b.classList.toggle('active', b.dataset.hojas === String(data.hojas)));
+    }
+
+  } catch {
+    // Si no existe el JSON de la especie, se mantienen los valores actuales
+    console.warn(`No se encontró data/${tipo}.json — usando valores actuales`);
+  }
+}
+
+// Actualiza un slider + su input numérico + el estado
+function _setSlider(id, value) {
+  const range = document.getElementById(id);
+  const numIn = document.getElementById('num-' + id);
+  const key   = id; // los ids coinciden con las keys del state
+  if (range) range.value = value;
+  if (numIn) numIn.value = value;
+  state[key] = value;
+}
+
+// --------------------------------------------------
+// Sliders — actualización SOLO al soltar el mouse
+// Durante el arrastre solo actualiza el input numérico
+// visualmente pero NO redibuja (evita lag)
 // --------------------------------------------------
 function bindSlider(id, key, min, max) {
   const range = document.getElementById(id);
   const numIn = document.getElementById('num-' + id);
 
-  // Slider arrastrado → actualiza input + estado + vista
+  // Durante arrastre: solo actualiza el número visual
   range.addEventListener('input', () => {
-    const v = Number(range.value);
-    state[key] = v;
+    numIn.value = range.value;
+    // Actualizar el state sin redibujar
+    state[key] = Number(range.value);
+  });
+
+  // Al SOLTAR: redibuja
+  range.addEventListener('change', () => {
+    let v = Number(range.value);
+    v = Math.max(min, Math.min(max, v));
+    range.value = v;
     numIn.value = v;
+    state[key] = v;
     redraw();
   });
 
-  // Input numerico editado → actualiza slider + estado + vista
+  // Input numérico editado manualmente → redibuja al confirmar
   numIn.addEventListener('change', () => {
     let v = Number(numIn.value);
     if (Number.isNaN(v)) v = Number(range.value);
@@ -94,15 +148,17 @@ function bindSlider(id, key, min, max) {
 
 bindSlider('altura',   'altura',   20, 200);
 bindSlider('tronco',   'tronco',   1,  20);
-bindSlider('ramas',    'ramas',    3,  7);   // minimo subido a 3
+bindSlider('ramas',    'ramas',    3,  7);
 bindSlider('densidad', 'densidad', 0,  10);
 
 // --------------------------------------------------
-// Especie
+// Especie — carga JSON y redibuja
 // --------------------------------------------------
-els.tipo.addEventListener('change', () => {
+els.tipo.addEventListener('change', async () => {
   state.tipo = els.tipo.value;
+  await cargarEspecie(state.tipo);
   toggleTrunkSwitch();
+  toggleHojasSwitch();
   redraw();
 });
 
@@ -121,11 +177,28 @@ els.trunkButtons.forEach(btn => {
 function toggleTrunkSwitch() {
   const visible = ESPECIES_CON_TRONCO.includes(state.tipo);
   els.trunkGroup.hidden = !visible;
-  // Al cambiar a una especie sin switch, el tronco se considera recto
   if (!visible && state.trunco_tipo !== 'recto') {
     state.trunco_tipo = 'recto';
     els.trunkButtons.forEach(b => b.classList.toggle('active', b.dataset.trunk === 'recto'));
   }
+}
+
+// --------------------------------------------------
+// Switch hojas on/off
+// --------------------------------------------------
+els.hojasButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.dataset.hojas === 'true';
+    state.hojas = v;
+    els.hojasButtons.forEach(b => b.classList.toggle('active', b.dataset.hojas === String(v)));
+    redraw();
+  });
+});
+
+function toggleHojasSwitch() {
+  const esRoble = ESPECIES_CON_HOJAS_SWITCH.includes(state.tipo);
+  els.hojasGroup.hidden    = !esRoble;
+  els.densidadGroup.hidden =  esRoble;
 }
 
 // --------------------------------------------------
@@ -141,7 +214,7 @@ els.correo.addEventListener('input', () => {
 });
 
 // --------------------------------------------------
-// Helpers de UI
+// Helpers UI
 // --------------------------------------------------
 function redraw() {
   TreeViewer.drawTree(state);
@@ -161,18 +234,49 @@ function setStatus(msg, type = 'loading') {
   els.status.className = `status ${type}`;
 }
 
-// Inicializacion
-toggleTrunkSwitch();
-updateBadges();
+// --------------------------------------------------
+// Export JSON — guarda configuración actual
+// --------------------------------------------------
+function exportarJSON() {
+  const data = {
+    especie:       tipoLabels[state.tipo] || state.tipo,
+    tipo:          state.tipo,
+    trunco_tipo:   state.trunco_tipo,
+    altura:        state.altura,
+    tronco:        state.tronco,
+    ramas:         state.ramas,
+    ...(state.tipo === 'roble'
+      ? { hojas: state.hojas }
+      : { densidad: state.densidad }),
+    escala:        escalaLabels[state.escala] || `1:${state.escala}`,
+    escala_ratio:  state.escala,
+    generado_en:   new Date().toISOString(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `arbol_${state.tipo}_${state.altura}mm.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
 // --------------------------------------------------
-// Boton Generar — llama al backend
+// Inicialización
+// --------------------------------------------------
+toggleTrunkSwitch();
+toggleHojasSwitch();
+updateBadges();
+
+// Cargar JSON de la especie inicial (roble)
+cargarEspecie(state.tipo);
+
+// --------------------------------------------------
+// Botón Generar STL
 // --------------------------------------------------
 els.btnGenerar.addEventListener('click', async () => {
   els.btnGenerar.disabled = true;
   els.btnDescargar.disabled = true;
   setStatus('⟳ Generando modelo STL en el servidor...', 'loading');
-
   try {
     const res = await fetch(`${API_URL}/generar`, {
       method: 'POST',
@@ -188,31 +292,22 @@ els.btnGenerar.addEventListener('click', async () => {
         correo:      state.correo,
       }),
     });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Error del servidor');
-    }
-
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Error del servidor'); }
     const data = await res.json();
     state.stlUrl = `${API_URL}${data.url}`;
-
     setStatus(`✓ Modelo generado: ${data.filename}`, 'success');
     els.btnDescargar.disabled = false;
-
   } catch (e) {
-    if (e.message.includes('fetch')) {
-      setStatus('✗ No se pudo conectar al backend. ¿Está corriendo el servidor?', 'error');
-    } else {
-      setStatus(`✗ Error: ${e.message}`, 'error');
-    }
+    setStatus(e.message.includes('fetch')
+      ? '✗ No se pudo conectar al backend. ¿Está corriendo el servidor?'
+      : `✗ Error: ${e.message}`, 'error');
   } finally {
     els.btnGenerar.disabled = false;
   }
 });
 
 // --------------------------------------------------
-// Boton Descargar
+// Botón Descargar STL
 // --------------------------------------------------
 els.btnDescargar.addEventListener('click', () => {
   if (!state.stlUrl) return;
@@ -221,3 +316,13 @@ els.btnDescargar.addEventListener('click', () => {
   a.download = `arbol_${state.tipo}_${state.altura}mm.stl`;
   a.click();
 });
+
+// --------------------------------------------------
+// Botón Exportar JSON
+// --------------------------------------------------
+const btnJson = document.createElement('button');
+btnJson.id = 'btn-json';
+btnJson.className = 'btn btn-secondary';
+btnJson.innerHTML = '<span class="btn-icon">{ }</span><span>Exportar JSON</span>';
+btnJson.addEventListener('click', exportarJSON);
+els.btnDescargar.parentNode.insertBefore(btnJson, els.btnDescargar.nextSibling);

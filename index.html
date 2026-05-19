@@ -4,33 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de Árboles 3D</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
       <div class="logo">
         <span class="logo-icon">⌬</span>
         <span>Tree<em>3D</em></span>
       </div>
-      <div class="header-sub">Generador paramétrico para impresión · v2.1</div>
+      <div class="header-sub">Generador paramétrico para impresión · v3.2</div>
     </div>
   </header>
 
-  <!-- APP -->
   <div class="app">
 
-    <!-- PANEL LATERAL -->
     <aside class="panel">
 
-      <!-- ESPECIE -->
       <section class="panel-section">
         <div class="section-title">Especie</div>
         <div class="select-group">
@@ -44,7 +38,6 @@
           </select>
         </div>
 
-        <!-- Tipo de tronco — solo visible para roble y eucalipto -->
         <div class="select-group trunk-type-group" id="trunk-type-group" hidden>
           <div class="section-title trunk-type-label">Tipo de tronco</div>
           <div class="trunk-switch">
@@ -55,11 +48,9 @@
         </div>
       </section>
 
-      <!-- PARAMETROS -->
       <section class="panel-section">
         <div class="section-title">Parámetros</div>
 
-        <!-- Altura -->
         <div class="slider-group">
           <div class="slider-row">
             <label for="altura">Altura <span class="unit">mm</span></label>
@@ -68,7 +59,6 @@
           <input type="range" id="altura" min="20" max="200" value="80">
         </div>
 
-        <!-- Tronco -->
         <div class="slider-group">
           <div class="slider-row">
             <label for="tronco">Grosor tronco</label>
@@ -77,7 +67,6 @@
           <input type="range" id="tronco" min="1" max="20" value="5">
         </div>
 
-        <!-- Ramas (mínimo subido a 3 para más frondosidad) -->
         <div class="slider-group">
           <div class="slider-row">
             <label for="ramas">Niveles de ramas</label>
@@ -86,17 +75,23 @@
           <input type="range" id="ramas" min="3" max="7" value="5">
         </div>
 
-        <!-- Densidad -->
-        <div class="slider-group">
+        <div class="slider-group" id="densidad-group">
           <div class="slider-row">
             <label for="densidad">Densidad follaje</label>
             <input type="number" class="num-input" id="num-densidad" min="0" max="10" value="7">
           </div>
           <input type="range" id="densidad" min="0" max="10" value="7">
         </div>
+
+        <div class="select-group hojas-group" id="hojas-group" hidden>
+          <div class="section-title hojas-label">Hojas</div>
+          <div class="trunk-switch">
+            <button type="button" class="switch-btn hojas-btn active" data-hojas="true">Con hojas</button>
+            <button type="button" class="switch-btn hojas-btn" data-hojas="false">Sin hojas</button>
+          </div>
+        </div>
       </section>
 
-      <!-- ESCALA -->
       <section class="panel-section">
         <div class="section-title">Escala de impresión</div>
         <div class="select-group">
@@ -109,13 +104,11 @@
         </div>
       </section>
 
-      <!-- CORREO -->
       <section class="panel-section">
         <div class="section-title">Envío por correo</div>
         <input type="email" id="correo" class="text-input" placeholder="tu@correo.cl">
       </section>
 
-      <!-- ACCIONES -->
       <div class="panel-actions">
         <button id="btn-generar" class="btn btn-primary">
           <span class="btn-icon">⚙</span>
@@ -129,7 +122,6 @@
       </div>
     </aside>
 
-    <!-- VIEWER -->
     <main class="viewer">
       <div class="viewer-badges">
         <span class="badge" id="badge-especie">Roble</span>
@@ -142,9 +134,21 @@
 
   </div>
 
-  <!-- THREE.JS -->
+  <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="js/tree.js"></script>
+
+  <!-- Motor 3D compartido -->
+  <script src="js/treeViewer.js"></script>
+
+  <!-- Módulo de cada especie -->
+  <script src="js/trees/roble.js"></script>
+  <script src="js/trees/pino.js"></script>
+  <script src="js/trees/palmera.js"></script>
+  <script src="js/trees/eucalipto.js"></script>
+  <script src="js/trees/araucaria.js"></script>
+  <script src="js/trees/muerto.js"></script>
+
+  <!-- Lógica principal -->
   <script src="js/main.js"></script>
 </body>
 </html>
