@@ -19,7 +19,7 @@ const state = {
   stlUrl:      null,
 };
 
-const ESPECIES_CON_TRONCO      = ['roble', 'eucalipto'];
+const ESPECIES_CON_TRONCO      = ['roble'];
 const ESPECIES_CON_HOJAS_SWITCH = ['roble'];
 
 const els = {
@@ -64,7 +64,15 @@ const escalaLabels = {
 // Init
 // --------------------------------------------------
 TreeViewer.init(els.canvas);
-TreeViewer.drawTree(state);
+// Doble rAF: garantiza que el browser ya calculó y pintó el layout
+// antes de que Three.js lea clientWidth/clientHeight del canvas
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  toggleTrunkSwitch();
+  toggleHojasSwitch();
+  updateBadges();
+  TreeViewer.drawTree(state);
+  cargarEspecie(state.tipo);
+}));
 
 // --------------------------------------------------
 // Carga JSON de especie desde /data/{especie}.json
@@ -234,20 +242,15 @@ function setStatus(msg, type = 'loading') {
   els.status.className = `status ${type}`;
 }
 
-// --------------------------------------------------
-// Export JSON — guarda configuración actual
-// --------------------------------------------------
-function exportarJSON() {
+// Export current configuration as JSON
+function descargarJSON() {
   const data = {
-    especie:       tipoLabels[state.tipo] || state.tipo,
     tipo:          state.tipo,
-    trunco_tipo:   state.trunco_tipo,
     altura:        state.altura,
     tronco:        state.tronco,
     ramas:         state.ramas,
-    ...(state.tipo === 'roble'
-      ? { hojas: state.hojas }
-      : { densidad: state.densidad }),
+    hojas:         state.hojas,
+    densidad:      state.densidad,
     escala:        escalaLabels[state.escala] || `1:${state.escala}`,
     escala_ratio:  state.escala,
     generado_en:   new Date().toISOString(),
@@ -261,14 +264,8 @@ function exportarJSON() {
 }
 
 // --------------------------------------------------
-// Inicialización
+// Inicialización — movida al requestAnimationFrame de arriba
 // --------------------------------------------------
-toggleTrunkSwitch();
-toggleHojasSwitch();
-updateBadges();
-
-// Cargar JSON de la especie inicial (roble)
-cargarEspecie(state.tipo);
 
 // --------------------------------------------------
 // Botón Generar STL
@@ -317,12 +314,3 @@ els.btnDescargar.addEventListener('click', () => {
   a.click();
 });
 
-// --------------------------------------------------
-// Botón Exportar JSON
-// --------------------------------------------------
-const btnJson = document.createElement('button');
-btnJson.id = 'btn-json';
-btnJson.className = 'btn btn-secondary';
-btnJson.innerHTML = '<span class="btn-icon">{ }</span><span>Exportar JSON</span>';
-btnJson.addEventListener('click', exportarJSON);
-els.btnDescargar.parentNode.insertBefore(btnJson, els.btnDescargar.nextSibling);
