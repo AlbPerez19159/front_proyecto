@@ -113,6 +113,107 @@ const TreeViewer = (() => {
     camera.updateProjectionMatrix();
   }
 
+  // --------------------------------------------------
+  // Exportación a STL — toma el árbol que se está viendo
+  // y genera un STL binario listo para impresión 3D.
+  //
+  // El árbol se construye con la altura en Y (convención Three.js),
+  // pero los slicers esperan la altura en Z. Por eso, antes de
+  // exportar, se rota el modelo -90° en X y se asienta la base en Z=0.
+  // Devuelve un Blob con el contenido del STL.
+  // --------------------------------------------------
+  function exportSTL() {
+    if (!treeGroup) return null;
+
+    // Clonar el árbol para no alterar lo que se ve en pantalla
+    const exportGroup = treeGroup.clone(true);
+    // Quitar la rotación de animación: exportamos el árbol "derecho"
+    exportGroup.rotation.set(0, 0, 0);
+    // Rotar -90° en X → la altura pasa de Y a Z
+    exportGroup.rotateX(-Math.PI / 2);
+    exportGroup.updateMatrixWorld(true);
+
+    // Recolectar todos los triángulos del árbol en coordenadas mundo
+    const triangulos = [];
+    const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+
+    exportGroup.traverse((obj) => {
+      if (!obj.isMesh || !obj.geometry) return;
+      const geo = obj.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+      const idx = geo.index;
+      const matrix = obj.matrixWorld;
+
+      const nTris = idx ? idx.count / 3 : pos.count / 3;
+      for (let t = 0; t < nTris; t++) {
+        let a, b, c;
+        if (idx) {
+          a = idx.getX(t * 3); b = idx.getX(t * 3 + 1); c = idx.getX(t * 3 + 2);
+        } else {
+          a = t * 3; b = t * 3 + 1; c = t * 3 + 2;
+        }
+        vA.fromBufferAttribute(pos, a).applyMatrix4(matrix);
+        vB.fromBufferAttribute(pos, b).applyMatrix4(matrix);
+        vC.fromBufferAttribute(pos, c).applyMatrix4(matrix);
+        triangulos.push([vA.clone(), vB.clone(), vC.clone()]);
+      }
+    });
+
+    if (triangulos.length === 0) return null;
+
+    // Asentar la base en Z = 0 (calcular Z mínimo y desplazar)
+    let minZ = Infinity;
+    for (const tri of triangulos)
+      for (const v of tri) if (v.z < minZ) minZ = v.z;
+    for (const tri of triangulos)
+      for (const v of tri) v.z -= minZ;
+
+    // --- Construir STL binario ---
+    // Cabecera 80 bytes + 4 bytes (nº triángulos) + 50 bytes por triángulo
+    const nTri = triangulos.length;
+    const buffer = new ArrayBuffer(84 + nTri * 50);
+    const dv = new DataView(buffer);
+
+    // Cabecera de texto (80 bytes)
+    const header = 'Tree3D STL export';
+    for (let i = 0; i < 80; i++) {
+      dv.setUint8(i, i < header.length ? header.charCodeAt(i) : 0);
+    }
+    dv.setUint32(80, nTri, true);
+
+    const normal = new THREE.Vector3();
+    const ab = new THREE.Vector3(), ac = new THREE.Vector3();
+    let offset = 84;
+
+    for (const [a, b, c] of triangulos) {
+      // Normal de la cara
+      ab.subVectors(b, a);
+      ac.subVectors(c, a);
+      normal.crossVectors(ab, ac).normalize();
+
+      dv.setFloat32(offset,      normal.x, true);
+      dv.setFloat32(offset + 4,  normal.y, true);
+      dv.setFloat32(offset + 8,  normal.z, true);
+      dv.setFloat32(offset + 12, a.x, true);
+      dv.setFloat32(offset + 16, a.y, true);
+      dv.setFloat32(offset + 20, a.z, true);
+      dv.setFloat32(offset + 24, b.x, true);
+      dv.setFloat32(offset + 28, b.y, true);
+      dv.setFloat32(offset + 32, b.z, true);
+      dv.setFloat32(offset + 36, c.x, true);
+      dv.setFloat32(offset + 40, c.y, true);
+      dv.setFloat32(offset + 44, c.z, true);
+      dv.setUint16(offset + 48, 0, true); // attribute byte count
+      offset += 50;
+    }
+
+    return {
+      blob: new Blob([buffer], { type: 'application/octet-stream' }),
+      triangulos: nTri,
+    };
+  }
+
   function _bindEvents(canvas) {
     window.addEventListener('resize', () => _resize(canvas));
 
@@ -136,5 +237,5 @@ const TreeViewer = (() => {
     });
   }
 
-  return { init, drawTree };
+  return { init, drawTree, exportSTL };
 })();

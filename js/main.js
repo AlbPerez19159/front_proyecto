@@ -16,7 +16,7 @@ const state = {
   hojas:       true,
   escala:      87,
   correo:      '',
-  stlUrl:      null,
+  stlBlobUrl:  null,
 };
 
 const ESPECIES_CON_TRONCO      = ['roble'];
@@ -227,7 +227,11 @@ els.correo.addEventListener('input', () => {
 function redraw() {
   TreeViewer.drawTree(state);
   updateBadges();
-  state.stlUrl = null;
+  // Invalidar el STL anterior: ya no corresponde al árbol que se ve
+  if (state.stlBlobUrl) {
+    URL.revokeObjectURL(state.stlBlobUrl);
+    state.stlBlobUrl = null;
+  }
   els.btnDescargar.disabled = true;
 }
 
@@ -269,47 +273,43 @@ function descargarJSON() {
 
 // --------------------------------------------------
 // Botón Generar STL
+// Exporta el árbol que se ve en el visor directamente a STL.
+// Lo que ves es exactamente lo que se descarga.
 // --------------------------------------------------
-els.btnGenerar.addEventListener('click', async () => {
+els.btnGenerar.addEventListener('click', () => {
   els.btnGenerar.disabled = true;
   els.btnDescargar.disabled = true;
-  setStatus('⟳ Generando modelo STL en el servidor...', 'loading');
-  try {
-    const res = await fetch(`${API_URL}/generar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tipo:        state.tipo,
-        trunco_tipo: state.trunco_tipo,
-        altura:      state.altura,
-        tronco:      state.tronco,
-        ramas:       state.ramas,
-        densidad:    state.densidad,
-        escala:      state.escala,
-        correo:      state.correo,
-      }),
-    });
-    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Error del servidor'); }
-    const data = await res.json();
-    state.stlUrl = `${API_URL}${data.url}`;
-    setStatus(`✓ Modelo generado: ${data.filename}`, 'success');
-    els.btnDescargar.disabled = false;
-  } catch (e) {
-    setStatus(e.message.includes('fetch')
-      ? '✗ No se pudo conectar al backend. ¿Está corriendo el servidor?'
-      : `✗ Error: ${e.message}`, 'error');
-  } finally {
-    els.btnGenerar.disabled = false;
-  }
+  setStatus('⟳ Generando modelo STL...', 'loading');
+
+  // requestAnimationFrame para que el navegador pinte el estado "loading"
+  // antes de bloquearse generando la geometría
+  requestAnimationFrame(() => {
+    try {
+      const resultado = TreeViewer.exportSTL();
+      if (!resultado) throw new Error('No hay árbol para exportar');
+
+      // Liberar URL anterior si existía
+      if (state.stlBlobUrl) URL.revokeObjectURL(state.stlBlobUrl);
+      state.stlBlobUrl = URL.createObjectURL(resultado.blob);
+
+      const kb = (resultado.blob.size / 1024).toFixed(0);
+      setStatus(`✓ Modelo generado · ${resultado.triangulos.toLocaleString()} triángulos · ${kb} KB`, 'success');
+      els.btnDescargar.disabled = false;
+    } catch (e) {
+      setStatus(`✗ Error: ${e.message}`, 'error');
+    } finally {
+      els.btnGenerar.disabled = false;
+    }
+  });
 });
 
 // --------------------------------------------------
 // Botón Descargar STL
 // --------------------------------------------------
 els.btnDescargar.addEventListener('click', () => {
-  if (!state.stlUrl) return;
+  if (!state.stlBlobUrl) return;
   const a = document.createElement('a');
-  a.href = state.stlUrl;
+  a.href = state.stlBlobUrl;
   a.download = `arbol_${state.tipo}_${state.altura}mm.stl`;
   a.click();
 });
