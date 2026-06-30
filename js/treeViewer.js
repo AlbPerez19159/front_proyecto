@@ -125,25 +125,47 @@ const TreeViewer = (() => {
   function exportSTL() {
     if (!treeGroup) return null;
 
-    // Clonar el árbol para no alterar lo que se ve en pantalla
-    const exportGroup = treeGroup.clone(true);
-    // Quitar la rotación de animación: exportamos el árbol "derecho"
-    exportGroup.rotation.set(0, 0, 0);
-    // Rotar -90° en X → la altura pasa de Y a Z
-    exportGroup.rotateX(-Math.PI / 2);
-    exportGroup.updateMatrixWorld(true);
+    // NO clonamos el árbol: el clone serializa userData y perdería el
+    // 'shape' de cada hoja. En su lugar leemos las geometrías directo y
+    // usamos matrices para (a) quitar la rotación de animación del
+    // contenedor y (b) rotar -90° en X (altura Y → Z, como esperan los slicers).
+    treeGroup.updateMatrixWorld(true);
+    const invRoot = new THREE.Matrix4().copy(treeGroup.matrixWorld).invert();
+    const Mexport = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
-    // Recolectar todos los triángulos del árbol en coordenadas mundo
+    // Las hojas se ven planas (2D) en pantalla, pero al EXPORTAR se
+    // reconstruyen con grosor para que sean imprimibles. Cache por metadata.
+    const solidCache = new Map();
+    function _solidLeafGeo(meta) {
+      if (solidCache.has(meta)) return solidCache.get(meta);
+      const g = new THREE.ExtrudeGeometry(meta.shape, {
+        depth: meta.thickness, bevelEnabled: false,
+      });
+      // Centrar igual que la hoja plana (X) y centrar el grosor (Z)
+      g.translate(-meta.cx, 0, -meta.thickness / 2);
+      solidCache.set(meta, g);
+      return g;
+    }
+
+    // Recolectar todos los triángulos del árbol
     const triangulos = [];
     const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+    const local = new THREE.Matrix4(), m = new THREE.Matrix4();
 
-    exportGroup.traverse((obj) => {
-      if (!obj.isMesh || !obj.geometry) return;
-      const geo = obj.geometry;
-      const pos = geo.attributes.position;
+    treeGroup.traverse((obj) => {
+      if (!obj.isMesh) return;
+
+      // Hoja plana marcada → usar su versión CON grosor imprimible
+      let geo = obj.geometry;
+      if (obj.userData && obj.userData.solid) geo = _solidLeafGeo(obj.userData.solid);
+
+      const pos = geo && geo.attributes && geo.attributes.position;
       if (!pos) return;
       const idx = geo.index;
-      const matrix = obj.matrixWorld;
+
+      // Transform del mesh en el espacio del árbol (sin animación) + export
+      local.multiplyMatrices(invRoot, obj.matrixWorld);
+      m.multiplyMatrices(Mexport, local);
 
       const nTris = idx ? idx.count / 3 : pos.count / 3;
       for (let t = 0; t < nTris; t++) {
@@ -153,9 +175,9 @@ const TreeViewer = (() => {
         } else {
           a = t * 3; b = t * 3 + 1; c = t * 3 + 2;
         }
-        vA.fromBufferAttribute(pos, a).applyMatrix4(matrix);
-        vB.fromBufferAttribute(pos, b).applyMatrix4(matrix);
-        vC.fromBufferAttribute(pos, c).applyMatrix4(matrix);
+        vA.fromBufferAttribute(pos, a).applyMatrix4(m);
+        vB.fromBufferAttribute(pos, b).applyMatrix4(m);
+        vC.fromBufferAttribute(pos, c).applyMatrix4(m);
         triangulos.push([vA.clone(), vB.clone(), vC.clone()]);
       }
     });
